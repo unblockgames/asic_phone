@@ -1,1 +1,4 @@
 /asic_phone/.venv
+main.conf
+.vscode
+__pycache__

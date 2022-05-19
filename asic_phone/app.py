@@ -1,17 +1,14 @@
 from utils import log, isBusinessHours
 import json
 import os
-import sys
 import requests
-import asyncio
-import random
 import time
 import pymysql
 import urllib.parse as up
-from flask import Flask, make_response, redirect, request
+from flask import Flask, make_response, request
 from twilio.rest import Client
-from twilio.twiml.voice_response import Gather, VoiceResponse, Say, Dial, Play, Hangup, Record
-from twilio.twiml.messaging_response import Body, Message, Redirect, MessagingResponse
+from twilio.twiml.voice_response import Gather, VoiceResponse, Say, Dial, Play, Hangup
+from twilio.twiml.messaging_response import Redirect
 
 app = Flask(__name__)
 

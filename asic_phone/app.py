@@ -20,7 +20,9 @@ auth_token = "f26b9492de9465d70a3aabee240d3d6c"
 
 client = Client(account_sid, auth_token)
 
-with open(os.getcwd() + "/main.conf", "r") as file:
+# with open(os.getcwd() + "/main.conf", "r") as file:
+#    CONFIG = json.load(file)
+with open("/var/www/twilio_app/main.conf", "r") as file:
     CONFIG = json.load(file)
 
 

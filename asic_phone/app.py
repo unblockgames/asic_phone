@@ -1,3 +1,4 @@
+from sys import stderr
 from utils import log, isBusinessHours
 import json
 import os
@@ -87,7 +88,7 @@ def menu_option_selected():
             transferred = True
         if option == '6':
             gather = Gather(timeout=CONFIG['CALLDURATIONS']
-                            ['short'], action="/directory_dial")
+                            ['xxshort'], action="/directory_dial")
             gather.append(Play(
                 "https://asicminingpanelspublic.s3.us-east-2.amazonaws.com/asic_phone/_Complete+Directory.mp3"))
             twilio_response.append(gather)
@@ -143,8 +144,15 @@ def directory_dial():
             record="record-from-start")
         twilio_response.append(dial)
     elif option == '106':  # Warehouse
-        twilio_response.append(
-            Redirect(url="/menu_option_selected?transferDigits=2"))
+        dial = Dial(hangup_on_star=True)
+        dial.conference(request.form['CallSid'],
+                        status_callback=CONFIG['BASELINK'] +
+                        "/handleconference?option={0}&transferred={1}".format(
+            option, 0),
+            status_callback_event="join leave",
+            start_conference_on_enter=False,
+            record="record-from-start")
+        twilio_response.append(dial)
     else:
         sqlStatement = "SELECT * FROM Extensions WHERE ext=%(option)s"
         sqlArgs = dict(option=option)
@@ -247,12 +255,12 @@ def handle_conference():
                         # call them...
                         addToConference(
                             caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Sales'], CONFIG['CALLDURATIONS']['long']*2)
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                         # if the conference hasnt started yet, call next person in line
                         if not conferenceStarted():
                             addToConference(
                                 caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Owner'], CONFIG['CALLDURATIONS']['short'])
-                            time.sleep(CONFIG['CALLDURATIONS']['short'] + 5)
+                            time.sleep(CONFIG['CALLDURATIONS']['short'] + 3)
                         # if the conference hasnt started yet, send to voicemail
                         if not conferenceStarted():
                             #  send to voicemail...
@@ -262,18 +270,16 @@ def handle_conference():
                         # call them...
                         addToConference(
                             caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Mgr'], CONFIG['CALLDURATIONS']['long']*2)
-                        """
                         addToConference(
-                            caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Warehouse'], CONFIG['CALLDURATIONS']['long'])
-                        """
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                            caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Warehouse'], CONFIG['CALLDURATIONS']['long']*2)
+                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                         # if the conference hasnt started yet, call next person in line
                         if not conferenceStarted():
                             addToConference(
                                 caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Owner'], CONFIG['CALLDURATIONS']['short'])
                             addToConference(
                                 caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Sales'], CONFIG['CALLDURATIONS']['short'])
-                            time.sleep(CONFIG['CALLDURATIONS']['short'] + 5)
+                            time.sleep(CONFIG['CALLDURATIONS']['short'] + 3)
                         # if the conference hasnt started yet, send to voicemail
                         if not conferenceStarted():
                             #  send to voicemail...
@@ -287,7 +293,7 @@ def handle_conference():
                         else:
                             addToConference(
                                 caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Owner'], CONFIG['CALLDURATIONS']['long'])
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                         # if the conference hasnt started yet, send to voicemail
                         if not conferenceStarted():
                             #  send to voicemail...
@@ -301,7 +307,7 @@ def handle_conference():
                         else:
                             addToConference(
                                 caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Owner'], CONFIG['CALLDURATIONS']['long'])
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                         # if the conference hasnt started yet, send to voicemail
                         if not conferenceStarted():
                             #  send to voicemail...
@@ -315,7 +321,7 @@ def handle_conference():
                         else:
                             addToConference(
                                 caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Owner'], CONFIG['CALLDURATIONS']['long'])
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                         # if the conference hasnt started yet, send to voicemail
                         if not conferenceStarted():
                             #  send to voicemail...
@@ -323,8 +329,8 @@ def handle_conference():
                                 url=CONFIG['BASELINK'] + "/voicemail?target=Accounting", method="GET")
                     elif option == '106':
                         addToConference(
-                            caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Warehouse'][0]['number'], CONFIG['CALLDURATIONS']['long'])
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                            caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Warehouse'], CONFIG['CALLDURATIONS']['long'])
+                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                         # if the conference hasnt started yet, send to voicemail
                         if not conferenceStarted():
                             #  send to voicemail...
@@ -345,7 +351,7 @@ def handle_conference():
                             else:
                                 addToConference(
                                     caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Owner'], CONFIG['CALLDURATIONS']['long'])
-                            time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                            time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                             # if the conference hasnt started yet, send to voicemail
                             if not conferenceStarted():
                                 #  send to voicemail...
@@ -355,7 +361,7 @@ def handle_conference():
 
                             addToConference(
                                 caller, request.form['ConferenceSid'], [{"number": extension_response[2]}], CONFIG['CALLDURATIONS']['long'])
-                            time.sleep(CONFIG['CALLDURATIONS']['long'] + 5)
+                            time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
                             # if the conference hasnt started yet, send to voicemail
                             if not conferenceStarted():
                                 #  send to voicemail...
@@ -364,10 +370,12 @@ def handle_conference():
         elif request.form['StatusCallbackEvent'] == 'participant-leave':
             if request.form['FriendlyName'] == request.form['CallSid']:
                 try:
-                    conference = client.conferences.get(
+                    conference = client.conferences(
                         request.form['ConferenceSid']).fetch().update(status="completed")
                 except:
-                    pass
+                    stderr.write(
+                        "There was an error that occurred when fetching the conference...")
+                    stderr.write(conference.sid)
     print("---------------")
     return ""
 
@@ -418,7 +426,7 @@ def call_control():
     caller.update(hold=True)
     twilio_response = VoiceResponse()
     gather = Gather(timeout=CONFIG['CALLDURATIONS']
-                    ['xshort'], action="/call_control_option_selected")
+                    ['xxshort'], action="/call_control_option_selected")
     gather.append(
         Say("To transfer the caller to Sales, press 1. To transfer the caller to a manager, press 2. To transfer the caller to an extension press 3. To transfer the caller to a specific 10 digit phone number, press 4. To send the caller to voicemail press 5."))
     twilio_response.append(gather)
@@ -451,14 +459,14 @@ def call_control_option_selected():
         twilio_response.append(
             Say("The caller was transferred. Goodbye."))
     elif digits == '3':
-        gather = Gather(
-            action="/transfer_to_extension?callerSid={0}".format(caller.call_sid))
+        gather = Gather(timeout=CONFIG['CALLDURATIONS']['xxshort'],
+                        action="/transfer_to_extension?callerSid={0}".format(caller.call_sid))
         gather.append(Say(
             "Enter the 3 digit extension of the person you want to transfer the caller to. For a list of extensions, dial 1."))
         twilio_response.append(gather)
     elif digits == '4':
         gather = Gather(timeout=CONFIG['CALLDURATIONS']
-                        ['xlong'], action="/transfer_direct?callerSid={0}".format(caller.call_sid))
+                        ['xxshort'], action="/transfer_direct?callerSid={0}".format(caller.call_sid))
         gather.append(
             Say("Enter the 10 digit number you want the caller to be transferred to."))
         twilio_response.append(gather)
@@ -482,8 +490,8 @@ def call_control_option_selected():
 def transfer_to_extension():
     twilio_response = VoiceResponse()
     if request.form['Digits'] == '1':
-        gather = Gather(
-            action="/transfer_to_extension?callerSid={0}".format(request.args['callerSid']))
+        gather = Gather(timeout=CONFIG['CALLDURATIONS']['xxshort'],
+                        action="/transfer_to_extension?callerSid={0}".format(request.args['callerSid']))
         gather.append(Play(
             "https://asicminingpanelspublic.s3.us-east-2.amazonaws.com/asic_phone/_Complete+Directory.mp3"))
         twilio_response.append(gather)

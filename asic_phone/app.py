@@ -13,18 +13,17 @@ from twilio.twiml.messaging_response import Redirect
 
 app = Flask(__name__)
 
-
-# Your Account SID from twilio.com/console
-account_sid = "ACd6341f5eb34207b6329a50257b36eef0"
-# Your Auth Token from twilio.com/console
-auth_token = "f26b9492de9465d70a3aabee240d3d6c"
-
-client = Client(account_sid, auth_token)
-
 # with open(os.getcwd() + "/main.conf", "r") as file:
 #    CONFIG = json.load(file)
 with open("/var/www/twilio_app/twilio_app/main.conf", "r") as file:
     CONFIG = json.load(file)
+
+# Your Account SID from twilio.com/console
+account_sid = CONFIG['TWILIO_AUTH']['account_sid']
+# Your Auth Token from twilio.com/console
+auth_token = CONFIG['TWILIO_AUTH']['auth_token']
+
+client = Client(account_sid, auth_token)
 
 
 def openDB():

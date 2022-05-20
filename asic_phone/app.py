@@ -37,7 +37,7 @@ def addToConference(caller, conferenceSid, whoToCall, timeout):
     cur = con.cursor()
     for person in whoToCall:
         call = client.calls.create(
-            to=person['number'], from_=caller.from_, timeout=timeout, url=CONFIG['BASELINK'] + "/joinConference")
+            to=person['number'], from_="+18175009328", timeout=timeout, url=CONFIG['BASELINK'] + "/joinConference")
         sqlStatement = "INSERT INTO Calls VALUES (%(CallSid)s, %(ConferenceSid)s, 0)"
         sqlArgs = dict(CallSid=call.sid,
                        ConferenceSid=conferenceSid)

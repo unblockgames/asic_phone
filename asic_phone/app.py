@@ -16,10 +16,10 @@ import asyncio
 
 app = Flask(__name__)
 
-with open(os.getcwd() + "/main.conf", "r") as file:
-    CONFIG = json.load(file)
-# with open("/var/www/twilio_app/twilio_app/main.conf", "r") as file:
+# with open(os.getcwd() + "/main.conf", "r") as file:
 #    CONFIG = json.load(file)
+with open("/var/www/twilio_app/twilio_app/main.conf", "r") as file:
+    CONFIG = json.load(file)
 
 # Your Account SID from twilio.com/console
 account_sid = CONFIG['TWILIO_AUTH']['account_sid']

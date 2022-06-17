@@ -2,3 +2,4 @@
 main.conf
 .vscode
 __pycache__
+/lambda_text_bot

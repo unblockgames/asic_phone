@@ -1,3 +1,4 @@
+from cProfile import run
 from sys import stderr
 from utils import log, isBusinessHours
 import json
@@ -10,13 +11,15 @@ from flask import Flask, make_response, request
 from twilio.rest import Client
 from twilio.twiml.voice_response import Gather, VoiceResponse, Say, Dial, Play, Hangup
 from twilio.twiml.messaging_response import Redirect
+from textbot import runTextBot
+import asyncio
 
 app = Flask(__name__)
 
-# with open(os.getcwd() + "/main.conf", "r") as file:
-#    CONFIG = json.load(file)
-with open("/var/www/twilio_app/twilio_app/main.conf", "r") as file:
+with open(os.getcwd() + "/main.conf", "r") as file:
     CONFIG = json.load(file)
+# with open("/var/www/twilio_app/twilio_app/main.conf", "r") as file:
+#    CONFIG = json.load(file)
 
 # Your Account SID from twilio.com/console
 account_sid = CONFIG['TWILIO_AUTH']['account_sid']
@@ -49,7 +52,7 @@ def addToConference(caller, conferenceSid, whoToCall, timeout):
 def conferenceStarted():
     con = openDB()
     cur = con.cursor()
-    sqlStatement = "SELECT * FROM Calls WHERE ConferenceSid=%(ConferenceSid)s AND isClaimed=1"
+    sqlStatement = "SELECT * FROM Answered WHERE ConferenceSid=%(ConferenceSid)s"
     sqlArgs = dict(
         ConferenceSid=request.form['ConferenceSid'])
     cur.execute(sqlStatement, sqlArgs)
@@ -254,7 +257,7 @@ def handle_conference():
                         # call them...
                         addToConference(
                             caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Sales'], CONFIG['CALLDURATIONS']['long']*2)
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
+                        time.sleep(CONFIG['CALLDURATIONS']['short'])
                         # if the conference hasnt started yet, call next person in line
                         if not conferenceStarted():
                             addToConference(
@@ -271,7 +274,7 @@ def handle_conference():
                             caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Mgr'], CONFIG['CALLDURATIONS']['long']*2)
                         addToConference(
                             caller, request.form['ConferenceSid'], CONFIG['NUMBERS']['Warehouse'], CONFIG['CALLDURATIONS']['long']*2)
-                        time.sleep(CONFIG['CALLDURATIONS']['long'] + 3)
+                        time.sleep(CONFIG['CALLDURATIONS']['short'])
                         # if the conference hasnt started yet, call next person in line
                         if not conferenceStarted():
                             addToConference(
@@ -381,19 +384,18 @@ def handle_conference():
 
 @app.route("/joinConference", methods=["POST"])
 def joinConference():
-    twilio_response = VoiceResponse()
-    con = openDB()
-    cur = con.cursor()
-    sqlStatement = "SELECT * FROM Calls WHERE CallSid=%(CallSid)s"
-    sqlArgs = dict(CallSid=request.form['CallSid'])
-    cur.execute(sqlStatement, sqlArgs)
-    call_response = cur.fetchone()
-    if call_response is None:
-        twilio_response.append(Say("An error occurred."))
-        twilio_response.append(Hangup())
-    elif not call_response[2]:  # if the call is not yet claimed
-        # claim the call
-        sqlStatement = "UPDATE Calls SET isClaimed=1 WHERE CallSid=%(CallSid)s"
+    try:
+        twilio_response = VoiceResponse()
+        con = openDB()
+        cur = con.cursor()
+        sqlStatement = "SELECT * FROM Calls WHERE CallSid=%(CallSid)s"
+        sqlArgs = dict(CallSid=request.form['CallSid'])
+        cur.execute(sqlStatement, sqlArgs)
+        call_response = cur.fetchone()
+        # attempt to claim the call
+        sqlStatement = "INSERT INTO Answered VALUES (%(conference_sid)s, %(call_sid)s)"
+        sqlArgs = dict(
+            conference_sid=call_response[1], call_sid=request.form['CallSid'])
         cur.execute(sqlStatement, sqlArgs)
         con.commit()
         # connect to the conference
@@ -403,13 +405,18 @@ def joinConference():
         twilio_response.append(dial)
         twilio_response.append(
             Redirect(url=CONFIG['BASELINK'] + "/call_control"))
-    else:  # if the call is already claimed
+        # Assemble the Response
+        r = make_response(str(twilio_response), 200)
+        r.mimetype = 'text/xml'
+        r.headers["Content-Type"] = "text/xml; charset=utf-8"
+    except Exception as e:
+        print(str(e))
         twilio_response.append(Say("Someone already answered the call."))
         twilio_response.append(Hangup())
-    # Assemble the Response
-    r = make_response(str(twilio_response), 200)
-    r.mimetype = 'text/xml'
-    r.headers["Content-Type"] = "text/xml; charset=utf-8"
+        # Assemble the Response
+        r = make_response(str(twilio_response), 200)
+        r.mimetype = 'text/xml'
+        r.headers["Content-Type"] = "text/xml; charset=utf-8"
     return r
 
 
